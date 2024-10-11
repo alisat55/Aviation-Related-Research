@@ -1,0 +1,406 @@
+                           ##DESCRIPTION: THIS CODE ANALYZES FAA'S UAS-RELATED DATA USING NLP AND DATA VISUALIZATION TECHNIQUES##
+
+#SETUP
+%matplotlib inline
+import numpy as np
+
+
+#importing the required libraries
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from google.colab import drive
+drive.mount("/content/gdrive")
+
+#the folder with all UAS-related files is called UAS
+#os.chdir("//UAS")
+!pwd
+
+os.chdir("/content/gdrive/MyDrive/UAS")
+
+                                                        ##GENERAL ANALYSIS OF UAS DATA (USING NLP)##
+#FILE 1: UAS Appearances in April 2024-June 2024
+#THIS IS MOSTLY A PRACTICE DATASET BUT COULD STILL BE USEFUL FOR THE CONFERENCE IN NOVEMBER
+
+# Creating a DataFrame using Pandas & reading in the file
+df = pd.read_excel("/content/gdrive/MyDrive/UAS/DroneAppearances_ApriltoJun2024.xlsx")
+
+# Appearances in Orlando (Case-insensitive matching)
+Orlando = df.iloc[:, 2].str.upper().value_counts().get('ORLANDO', 0)
+
+# Appearances in Daytona Beach (Case-insensitive matching)
+Daytona = df.iloc[:, 2].str.upper().value_counts().get('DAYTONA BEACH', 0)
+
+# Printing the results
+print(f'From April to June of 2024, there were {Orlando} drone appearances in Orlando, Florida, according to the FAA.')
+print(f'From April to June of 2024, there were {Daytona} drone appearances in Daytona Beach, Florida, according to the FAA.')
+print('California and Florida are the states with the most drone appearances')
+# Pie Chart: Appearances by State
+states = df.iloc[:, 1]  # Select the column with US states (second column)
+numbers = states.value_counts()  # Count the occurrence of each state
+
+# Group smaller categories into "Other" if they are below a 2.5% certain threshold
+threshold = 0.025 * numbers.sum()
+numbers = pd.concat([numbers[numbers >= threshold], pd.Series(numbers[numbers < threshold].sum(), index=['OTHER STATES'])])
+
+# Create a pie chart
+plt.figure(figsize=(7, 7))  # Determine the size of the pie chart
+plt.pie(numbers, labels=numbers.index,
+        autopct='%1.2f%%',  # Format the data to two decimal places
+        startangle=150)  # Rotate the chart
+plt.title('Drone Appearances in April-June 2024 by State')
+plt.show()
+
+import matplotlib.cm as cm #importing a colormap
+#Creating a bar graph
+states =df.iloc[:,1] #set the variable "states" as the second column
+
+
+
+#count the number of occurences by state
+states = states.value_counts()
+
+#sort the data in a descending order
+state_counts = states.sort_values(ascending=False) #descending order
+
+#colors
+colors = cm.rainbow(np.linspace(0, 1, len(state_counts))) #rainbow colormap, generates distinct colors for each state
+
+#figure size
+plt.figure(figsize=(10,10))
+
+#create a bar graph with labels and a title
+state_counts.plot(kind='bar', color = colors) #plot the states and the appearances by state
+
+plt.xlabel('State')
+plt.ylabel('Number of Drone Appearances')
+plt.title('Number of Drone Appearances in April-June of 2024 by State')
+plt.show()
+
+#File 2: Recreational Drone Use in April of 2019
+dataframe = pd.read_csv("/content/gdrive/MyDrive/UAS/ReactionalDrones_FAA.csv")
+
+#Finding the state with the highest recreational drone use
+state = dataframe.iloc[:,6] #locate the seventh column where the states are mentioned
+count = state.value_counts() #number of occurences per state
+most_common_state =count.idxmax()
+most_common_state_count = count.max()
+print(f"The state with the greatest drone usage is {most_common_state} with {most_common_state_count} appearances in April 2019.")
+
+#Pie Chart: Drone Usage in California
+california_data = dataframe[dataframe.iloc[:, 6] == 'CA']  #filter the dataset to only include California
+california_cities = california_data.iloc[:,5] #locate the sixth column where the cities are mentioned
+count_city = california_cities.value_counts() #number of occurences per city
+numbers = count_city.sort_values(ascending=False) #sort in descending order
+# Group smaller categories into "Other cities" if they are below a 3% certain threshold
+threshold = 0.03 * numbers.sum()
+numbers = pd.concat([numbers[numbers >= threshold], pd.Series(numbers[numbers < threshold].sum(), index=['OTHER CITIES'])])
+# Create a pie chart
+plt.figure(figsize=(7, 7))  # Determine the size of the pie chart
+plt.pie(numbers, labels=numbers.index,
+        autopct='%1.2f%%',  # Format the data to two decimal places
+        startangle=150)  # Rotate the chart
+plt.title('Drone Appearances in April-June 2024 in California')
+plt.show()
+
+#Combining Drone Appearance Data
+
+#df1 = pd.read_excel('DroneAppearances_JantoMar2022.xlsx')
+#df2 = pd.read_excel('DroneAppearances_AprtoJun2022.xlsx')
+#df3 = pd.read_excel('DroneAppearances_JultoSept2022.xlsx')
+#df4 = pd.read_excel('DroneAppearances_OcttoDec2022.xlsx')
+#df5 = pd.read_excel('DroneAppearances_JantoMar2023.xlsx')
+#df6 = pd.read_excel('DroneAppearances_AprtoJun2023.xlsx')
+#df7 = pd.read_excel('DroneAppearances_JultoSept2023.xlsx')
+#df8 = pd.read_excel('DroneAppearances_OcttoDec2023.xlsx')
+#df9 = pd.read_excel('DroneAppearances_JantoMar2024.xlsx')
+#df10 = pd.read_excel('DroneAppearances_AprtoJun2024.xlsx')
+
+# Concatenate the DataFrames
+#combined_df = pd.concat([df5, df6, df7, df8], ignore_index=True)
+
+#Create an Excel file with 2023 data. Ignoring all other data for now
+#appearances_2023 = combined_df.to_excel('Drone_Appearances2023.xlsx', index=False)
+
+#Note: I used Python to combine this data and then I commented out my process to save run time. The combined file is in the google drive:
+appearances_2023 = pd.read_excel("/content/gdrive/MyDrive/UAS/Combined_Drone_Appearances.xlsx")
+
+#Using NLP to find the most commonly used words:
+from sklearn.feature_extraction.text import CountVectorizer
+
+# The description column is called "summary"
+descriptions = appearances_2023['Summary'].dropna()
+
+# Count the frequency of words
+vectorizer = CountVectorizer(stop_words='english')
+word_count = vectorizer.fit_transform(descriptions)
+
+# Sum the word occurrences
+word_freq = word_count.toarray().sum(axis=0)
+
+# Create a dataframe of word frequencies
+word_freq_df = pd.DataFrame({'word': vectorizer.get_feature_names_out(), 'frequency': word_freq})
+word_freq_df = word_freq_df.sort_values(by='frequency', ascending=False)
+
+# Print the top 20 most common words
+print(word_freq_df.head(20))
+
+#Clustering (Grouping similar drone activities together)
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+
+# Convert the descriptions to TF-IDF vectors
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(appearances_2023['Summary'])
+
+# Apply KMeans clustering
+kmeans = KMeans(n_clusters=5, random_state=42)
+appearances_2023['Cluster'] = kmeans.fit_predict(X)
+
+# Print a few examples from each cluster
+#for i in range(5):
+    #print(f"\nCluster {i+1}:") #i+1 because of Python's indexing system
+    #print(appearances_2023[appearances_2023['Cluster'] == i]['Summary'].head(5))
+
+# Print descriptions for each cluster
+
+print("Some examples from each cluster:\n")
+
+for i in range(5):
+    print(f"\nCluster {i+1}:")
+    cluster_data = appearances_2023[appearances_2023['Cluster'] == i]['Summary']
+    for idx, description in enumerate(cluster_data.head(5), 1):
+        print(f"{idx}. {description[:500]}")  # Displaying up to 500 characters of each description
+        print("-" * 50)
+
+#Understanding how clusters were formed using centroids:
+
+print("Let's analyze how the clusters were selected:\n")
+#get the centroids
+centroids = kmeans.cluster_centers_
+
+#figure out what the TF-IDF Matrix looks like and what terms are used for it:
+terms = vectorizer.get_feature_names_out()
+
+# Function to display the top terms per cluster
+def print_top_terms_per_cluster(centroids, terms, num_words=10):
+    for i, centroid in enumerate(centroids):
+        print(f"\nCluster {i+1}:")
+        top_indices = centroid.argsort()[-num_words:][::-1]  # Get indices of the top terms in the cluster
+        top_terms = [terms[index] for index in top_indices]  # Map indices to actual terms
+        print("Top terms:", ", ".join(top_terms))
+
+print_top_terms_per_cluster(centroids, terms, num_words=10)
+
+#SENTIMENT ANALYSIS: IMPLEMENT THIS
+#from textblob import TextBlob
+
+#def sentiment_analysis(text):
+    #blob = TextBlob(text)
+    #return blob.sentiment.polarity
+
+
+                                                               ##Some results (NLP-Related work):##
+#Cluster 1:
+#Top terms: atlanta, atl, lax, angeles, los, ga, uas, tracon, ca, county
+
+#Cluster 2:
+#Top terms: new, york, ny, jfk, lga, uas, aviation, nypd, sw, unit
+
+#Cluster 3:
+#Top terms: fort, dallas, lauderdale, fll, dfw, worth, uas, broward, tx, dps
+
+#Cluster 4:
+#Top terms: uas, reported, feet, ops, action, evasive, info, advised, prelim, faa
+
+#Cluster 5:
+#Top terms: chicago, ord, il, mdw, fbi, uas, tracon, 12, reported, position
+
+#Visualizing cluster results:
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+
+# Reduce the TF-IDF vectors to 2 dimensions using t-SNE
+tsne = TSNE(n_components=2, random_state=42)
+X_tsne = tsne.fit_transform(X.toarray())
+
+# Plot the clusters in 2D space
+plt.figure(figsize=(10, 7))
+plt.scatter(X_tsne[:, 0], X_tsne[:, 1], c=kmeans.labels_, cmap='viridis', s=50)
+plt.title("t-SNE Visualization of Drone Appearance Clusters")
+plt.xlabel("Dimension 1")
+plt.ylabel("Dimension 2")
+plt.colorbar(label='Cluster')
+plt.show()
+
+                                                                               ##DRONE-RELATED COSTS##
+
+df = pd.read_csv("/content/gdrive/MyDrive/UAS/cost_militarydrones.csv")
+cost = df.iloc[:,2] #finding the cost column
+
+#Change the values like "5M" to 5000000
+def convert_to_number(cost_str):
+    # Check if the string contains 'M' for million
+    if isinstance(cost_str, (float, int)):
+        return cost_str
+    if 'M' in cost_str:
+        # Remove the 'M' and convert the remaining part to a float, then multiply by 1 million
+        return float(cost_str.replace('M', ''))
+
+#apply the conversion
+df['converted_cost']=cost.apply(convert_to_number)
+
+#check if it works on the first 5 rows
+df[['converted_cost']].head()
+
+#Graphing
+country = df.iloc[:,1]
+
+# Group by country and sum the costs for each country
+
+country_costs = df.groupby(country)['converted_cost'].sum().reset_index()
+country_costs.head(10)
+
+# Plot the bar chart
+plt.figure(figsize=(12, 6))
+
+#rainbow colormap for the sake of clarity
+colors = cm.rainbow(np.linspace(0, 1, len(state_counts)))
+
+#UAS COSTS BY COUNTRY
+plt.bar(country_costs.iloc[:, 0], country_costs['converted_cost'], width = 1.0, color = colors)
+plt.xlabel('Organization/ Country Name')
+plt.ylabel('Total Cost (millions)')
+plt.title('Total Cost of Drones by Country')
+plt.xticks(rotation=90, ha='right')  # Rotate x-axis labels for readability
+plt.subplots_adjust(bottom=0.8)  # Rotate the country names for better readability
+plt.tight_layout()  # Adjust layout to prevent clipping of labels
+plt.show()
+
+### NLP ###
+# Define stopwords
+stop_words = set(stopwords.words('english'))
+
+# Function to tokenize text and remove stopwords
+def tokenize_and_remove_stopwords(text):
+    # Convert text to lowercase
+    text = text.lower()
+    # Remove special characters (anything that is not a letter or space)
+    text = re.sub(r'[^a-z\s]', '', text)
+    # Tokenize the text
+    tokens = word_tokenize(text)
+    # Remove stopwords
+    tokens = [word for word in tokens if word not in stop_words]
+    return tokens
+
+#probable cause
+all_details = ' '.join(probable_cause)
+tokens = tokenize_and_remove_stopwords(all_details)
+word_freq=Counter(tokens).most_common(10)
+print(f'The most common words in the probable cause column are {word_freq}.')
+
+#findings
+findings = world_drones['Findings'].dropna()
+find_new = ' '.join(findings)
+tokens_new = tokenize_and_remove_stopwords(find_new)
+freq_word = Counter(tokens_new).most_common(10)
+print(f'The most common words in the findings column are {freq_word}.')
+
+#Sentiment analysis
+
+#for probable cause
+def sentiment_analysis(text):
+    blob = TextBlob(text)
+    return blob.sentiment.polarity
+print(f'The sentiment analysis coefficient for the probable cause column is {sentiment_analysis(all_details)} '
+      'and that means that the sentiment of the column is '
+      'slightly negative, leaning towards neutral.')
+
+#for findings
+def sentiment_analysis(text):
+    blob = TextBlob(text)
+    return blob.sentiment.polarity
+print(f'The sentiment analysis coefficient for the fidings column is {sentiment_analysis(find_new)} '
+      'and that means that the sentiment of the column is '
+      'slightly negative, leaning towards neutral.')
+
+# Apply sentiment analysis to the 'ProbableCause' column
+world_drones['Sentiment_ProbableCause'] = world_drones['ProbableCause'].dropna().apply(sentiment_analysis)
+
+# Apply sentiment analysis to the 'Findings' column
+world_drones['Sentiment_Findings'] = world_drones['Findings'].dropna().apply(sentiment_analysis)
+
+#Making a heatmap
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Convert the word frequency data into a DataFrame
+# Assuming word_freq and freq_word are the word frequency lists from your 'ProbableCause' and 'Findings' columns
+# Example data format: word_freq = [('word1', 50), ('word2', 30), ('word3', 20)]
+probable_cause_df = pd.DataFrame(word_freq, columns=['Word', 'Frequency'])
+findings_df = pd.DataFrame(freq_word, columns=['Word', 'Frequency'])
+
+# Merge the dataframes on the 'Word' column to create a common heatmap
+merged_df = pd.merge(probable_cause_df, findings_df, on='Word', how='outer', suffixes=('_ProbableCause', '_Findings')).fillna(0)
+
+# Set the 'Word' column as the index for better visualization
+merged_df.set_index('Word', inplace=True)
+
+# Plotting the heatmap
+plt.figure(figsize=(6, 6))
+sns.heatmap(merged_df, annot=True, cmap='YlGnBu', fmt='.2f') #two decimal points
+
+# Adding labels and title
+plt.title('Word Frequency Heatmap for Probable Cause and Findings for UAS accidents')
+plt.xlabel('Columns')
+plt.ylabel('Words')
+plt.tight_layout()
+print('This is the word frequency heatmap for the probable cause of UAS-related accidents as well as for the UAS-related findings.')
+plt.show()
+
+#Word Cloud
+!pip install wordcloud
+from wordcloud import WordCloud
+#bilinear interpolation is a method that takes the average of the four nearest pixel values to create a smoother image.
+# Create a word cloud for the ProbableCause column
+wordcloud_probable_cause = WordCloud(width=800, height=400, background_color='white').generate(all_details)
+
+# Plot the word cloud
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud_probable_cause, interpolation='bilinear')
+plt.axis('off')  # Hide the axes
+plt.title('Word Cloud for Probable Cause of UAS Incidents')
+plt.show()
+
+# Create a word cloud for the Findings column
+wordcloud_findings = WordCloud(width=800, height=400, background_color='white').generate(find_new)
+
+# Plot the word cloud
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud_findings, interpolation='bilinear')
+plt.axis('off')  # Hide the axes
+plt.title('Word Cloud for UAS Accident-Related Findings ')
+plt.show()
+
+                                           ###Sentiment-Over-Time Graph###
+# Resample the data by month or year to calculate average sentiment over time
+sentiment_over_time_prob_cause = world_drones.resample('M', on='EventDate')['Sentiment_ProbableCause'].mean()
+sentiment_over_time_findings = world_drones.resample('M', on='EventDate')['Sentiment_Findings'].mean()
+
+# Plotting the sentiment over time for both columns
+plt.figure(figsize=(7, 7))
+plt.plot(sentiment_over_time_prob_cause, label='Probable Cause', marker='o', linestyle='-')
+plt.plot(sentiment_over_time_findings, label='Findings', marker='o', linestyle='-')
+plt.title('Average Sentiment Over Time for Probable Cause and Findings')
+plt.xlabel('Year')
+plt.ylabel('Average Sentiment Score')
+plt.axhline(0, color='red', linestyle='--', linewidth=0.5)  # Neutral sentiment line
+plt.grid(True)
+plt.legend
+plt.legend()
+plt.show()
+
+
+
